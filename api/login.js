@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 
 const DEFAULT_USER = 'admin'
-const DEFAULT_PASSWORD = 'auriforce'
+const DEFAULT_PASSWORD = 'Hilton'
 
 function passwordsMatch(left, right) {
   const a = Buffer.from(String(left))

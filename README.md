@@ -22,4 +22,4 @@ Opens at [http://127.0.0.1:5174/login](http://127.0.0.1:5174/login).
 Default login (change in `.env`):
 
 - Username: `admin`
-- Password: `auriforce`
+- Password: `Hilton`

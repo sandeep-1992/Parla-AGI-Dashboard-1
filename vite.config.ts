@@ -7,7 +7,7 @@ import { fetchWithRetry, formatUpstreamError } from './lib/upstream.js'
 
 const DEFAULT_WEBHOOK = 'https://engine.auriforce.com/webhook/fetch-sales-enquiry'
 const DEFAULT_USER = 'admin'
-const DEFAULT_PASSWORD = 'auriforce'
+const DEFAULT_PASSWORD = 'Hilton'
 const ELEVENLABS_BASE = 'https://api.elevenlabs.io/v1/convai'
 
 function json(res: ServerResponse, status: number, body: unknown) {
