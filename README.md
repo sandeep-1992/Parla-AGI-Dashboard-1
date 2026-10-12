@@ -7,13 +7,12 @@ Standalone website for the live sales enquiry feed. It matches the outbound call
 - Username / password login
 - Fetches enquiries from `https://engine.auriforce.com/webhook/fetch-sales-enquiry` through a local `/api/enquiries` proxy (avoids browser CORS)
 - Datatable of enquiry type, guest contact, enquiry preview, and received time
-- Search, type filter, auto-sync, CSV / JSON export
+- Search, type filter, auto-sync, CSV export
 - Responsive layout for phone and laptop
 
 ## Run locally
 
 ```bash
-cd sales-enquiry-portal
 npm install
 npm run dev
 ```
