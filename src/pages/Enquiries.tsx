@@ -23,7 +23,6 @@ import { applyDecisions, loadDecisions, saveDecision } from '../services/decisio
 import { fetchSalesEnquiries } from '../services/enquiryService'
 import {
   enableEnquiryNotifications,
-  isInstalledPwa,
   notifyNewEnquiries,
   notificationsWanted,
   setNotificationsWanted,
@@ -238,18 +237,20 @@ export function EnquiriesPage() {
     const permission = await enableEnquiryNotifications()
     if (permission === 'granted') {
       setAlertsOn(true)
-      showToast(
-        isInstalledPwa()
-          ? 'Phone alerts on. New enquiries will show like a message notification.'
-          : 'Alerts on. For lock-screen alerts, open from your home-screen icon (Add to Home Screen).',
-        'success',
-      )
+      showToast('Phone alerts on. A test notification was sent — check your phone shade.', 'success')
       return
     }
     setAlertsOn(false)
+    if (permission === 'needs-homescreen') {
+      showToast(
+        'On iPhone: Share → Add to Home Screen, open that icon, then tap Alerts on.',
+        'error',
+      )
+      return
+    }
     showToast(
       permission === 'unsupported'
-        ? 'This browser cannot show phone alerts.'
+        ? 'This phone browser cannot show alerts. Use Chrome/Safari home-screen app.'
         : 'Allow notifications in the phone prompt, then try again.',
       'error',
     )
@@ -371,21 +372,6 @@ export function EnquiriesPage() {
                 </select>
               </label>
 
-              <div className="status-seg" role="tablist" aria-label="Enquiry status">
-                {STATUS_FILTERS.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={statusFilter === item.id}
-                    className={`status-seg-btn ${item.id} ${statusFilter === item.id ? 'on' : ''}`}
-                    onClick={() => setStatusFilter(item.id)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-
               <button
                 type="button"
                 className={`chip-toggle ${alertsOn ? 'on' : ''}`}
@@ -413,6 +399,21 @@ export function EnquiriesPage() {
               >
                 <IconCsv />
               </button>
+            </div>
+
+            <div className="status-seg" role="tablist" aria-label="Enquiry status">
+              {STATUS_FILTERS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={statusFilter === item.id}
+                  className={`status-seg-btn ${item.id} ${statusFilter === item.id ? 'on' : ''}`}
+                  onClick={() => setStatusFilter(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
           </div>
 

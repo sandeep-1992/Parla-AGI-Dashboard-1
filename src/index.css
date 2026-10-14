@@ -681,7 +681,7 @@ select {
 
 .toolbar {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 0.65rem;
   align-items: center;
   background: #fff;
@@ -689,6 +689,13 @@ select {
   border-radius: 1rem;
   padding: 0.7rem 0.85rem;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.toolbar .status-seg {
+  flex: 1 1 auto;
 }
 
 .search-wrap,
@@ -744,6 +751,9 @@ select {
   border: 1px solid #e6edf3;
   border-radius: 999px;
   background: #fff;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .status-seg-btn {
@@ -755,6 +765,7 @@ select {
   font-weight: 650;
   color: #64748b;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .status-seg-btn.accepted {
@@ -1525,19 +1536,25 @@ button.chip-toggle {
   .toolbar,
   .toolbar-actions {
     flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .toolbar {
     padding: 0.65rem;
+    overflow: hidden;
   }
 
   .search-wrap {
-    min-width: 100%;
+    min-width: 0;
+    width: 100%;
     flex: 1 1 100%;
   }
 
   .select-wrap {
-    flex: 1 1 auto;
+    flex: 1 1 100%;
+    width: 100%;
     min-width: 0;
   }
 
@@ -1547,15 +1564,29 @@ button.chip-toggle {
   }
 
   .status-seg {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    flex: 1 1 100%;
+    gap: 0.2rem;
+    padding: 0.25rem;
+    border-radius: 0.85rem;
+    overflow: hidden;
   }
 
   .status-seg-btn {
-    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    padding: 0.5rem 0.35rem;
+    font-size: 0.72rem;
     text-align: center;
-    min-height: 2.4rem;
+    min-height: 2.45rem;
+    white-space: normal;
+  }
+
+  .chip-toggle,
+  .btn-round {
+    flex-shrink: 0;
   }
 
   .user-name {

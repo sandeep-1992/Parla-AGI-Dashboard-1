@@ -3,6 +3,13 @@ import type { SalesEnquiry } from '../types/enquiry'
 const SEEN_KEY = 'hilton-inquiries.seen-ids'
 const ENABLED_KEY = 'hilton-inquiries.notifications'
 
+export type AlertEnableResult =
+  | 'granted'
+  | 'denied'
+  | 'default'
+  | 'unsupported'
+  | 'needs-homescreen'
+
 function enquiryKey(row: SalesEnquiry): string {
   return String(row.id || row.conversationId || '')
 }
@@ -31,8 +38,15 @@ export function setNotificationsWanted(on: boolean) {
 
 export function isInstalledPwa(): boolean {
   const standalone = window.matchMedia('(display-mode: standalone)').matches
-  const iosStandalone = 'standalone' in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
+  const iosStandalone =
+    'standalone' in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
   return standalone || iosStandalone
+}
+
+export function isIosDevice(): boolean {
+  const ua = navigator.userAgent || ''
+  if (/iPad|iPhone|iPod/.test(ua)) return true
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
 
 export async function registerEnquiryWorker(): Promise<ServiceWorkerRegistration | null> {
@@ -76,22 +90,6 @@ async function subscribePush(registration: ServiceWorkerRegistration) {
   return save.ok
 }
 
-export async function enableEnquiryNotifications(): Promise<NotificationPermission | 'unsupported'> {
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return 'unsupported'
-  setNotificationsWanted(true)
-  const permission = await Notification.requestPermission()
-  if (permission !== 'granted') return permission
-  const registration = await registerEnquiryWorker()
-  if (registration) {
-    try {
-      await subscribePush(registration)
-    } catch {
-      // Local lock-screen alerts still work via the service worker.
-    }
-  }
-  return permission
-}
-
 async function showOsNotification(title: string, body: string, tag: string) {
   const registration = await navigator.serviceWorker?.ready.catch(() => null)
   const options: NotificationOptions = {
@@ -109,7 +107,46 @@ async function showOsNotification(title: string, body: string, tag: string) {
     return
   }
 
-  new Notification(title, { body, icon: '/hilton-logo.png', tag })
+  if ('Notification' in window) {
+    new Notification(title, { body, icon: '/hilton-logo.png', tag })
+  }
+}
+
+export async function enableEnquiryNotifications(): Promise<AlertEnableResult> {
+  if (!('Notification' in window)) {
+    if (isIosDevice() && !isInstalledPwa()) return 'needs-homescreen'
+    return 'unsupported'
+  }
+  if (!('serviceWorker' in navigator)) {
+    if (isIosDevice() && !isInstalledPwa()) return 'needs-homescreen'
+    return 'unsupported'
+  }
+
+  // iPhone/iPad only allow real OS notifications from the home-screen app.
+  if (isIosDevice() && !isInstalledPwa()) {
+    return 'needs-homescreen'
+  }
+
+  setNotificationsWanted(true)
+  const permission = await Notification.requestPermission()
+  if (permission !== 'granted') return permission
+
+  const registration = await registerEnquiryWorker()
+  if (registration) {
+    try {
+      await subscribePush(registration)
+    } catch {
+      // Local OS alerts still work without push subscribe.
+    }
+  }
+
+  await showOsNotification(
+    'Hilton alerts ready',
+    'You will get a phone notification when a new enquiry arrives.',
+    'hilton-alert-test',
+  )
+
+  return 'granted'
 }
 
 async function fanOutPush() {
