@@ -1828,14 +1828,14 @@ button.chip-toggle {
 
 .admin-logo {
   display: block;
-  height: 3.4rem;
+  height: 5.25rem;
   width: auto;
   object-fit: contain;
 }
 
 .admin-logo-login {
-  height: 4.5rem;
-  margin-bottom: 0.5rem;
+  height: 6.5rem;
+  margin-bottom: 0.65rem;
 }
 
 .admin-user {
