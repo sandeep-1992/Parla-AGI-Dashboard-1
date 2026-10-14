@@ -1802,6 +1802,8 @@ button.chip-toggle {
   padding: 1.1rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
   background: #fff;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .admin-topbar h1 {
@@ -1834,9 +1836,10 @@ button.chip-toggle {
 
 .admin-main {
   padding: 1.25rem 1.5rem 2.5rem;
-  max-width: 1040px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .admin-banner {
@@ -1857,14 +1860,19 @@ button.chip-toggle {
 
 .admin-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
+  gap: 1rem;
   align-items: start;
-  justify-content: stretch;
+  width: 100%;
 }
 
 .admin-form-panel {
   width: 100%;
+  min-width: 0;
+}
+
+.admin-list-panel {
+  min-width: 0;
 }
 
 .admin-panel {
