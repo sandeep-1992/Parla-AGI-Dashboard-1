@@ -28,4 +28,4 @@ Default login (change in `.env`):
 
 ## Vercel
 
-Connect this GitHub repo in the Vercel project (**Settings → Git**), set production branch to `main`, then redeploy. Add env vars from `.env.example` (including `VAPID_*` for push alerts).
+Connect this GitHub repo in the Vercel project (**Settings → Git**), set production branch to `main`, then open **Deployments → Create Deployment** (or push to `main`) to start a build. Add env vars from `.env.example` (including `VAPID_*` for push alerts).
