@@ -1,4 +1,5 @@
 import { addPushSubscription } from '../../lib/push.js'
+import { hasDurablePushStore } from '../../lib/pushStore.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
     const count = await addPushSubscription(body.subscription ?? body)
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify({ ok: true, count }))
+    res.end(JSON.stringify({ ok: true, count, durable: hasDurablePushStore() }))
   } catch (error) {
     res.statusCode = 400
     res.setHeader('Content-Type', 'application/json')

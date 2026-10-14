@@ -23,6 +23,7 @@ import { applyDecisions, loadDecisions, saveDecision } from '../services/decisio
 import { fetchSalesEnquiries } from '../services/enquiryService'
 import {
   enableEnquiryNotifications,
+  isInstalledPwa,
   notifyNewEnquiries,
   notificationsWanted,
   setNotificationsWanted,
@@ -43,7 +44,8 @@ import {
 
 type StatusFilter = 'all' | 'pending' | 'accepted' | 'resolved'
 
-const AUTO_SYNC_MS = 30_000
+const AUTO_SYNC_MS = 20_000
+const HIDDEN_SYNC_MS = 45_000
 const PAGE_SIZES = [10, 25, 50]
 const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -106,10 +108,24 @@ export function EnquiriesPage() {
   }, [alertsOn])
 
   useEffect(() => {
-    const id = window.setInterval(() => {
-      void load(true)
-    }, AUTO_SYNC_MS)
-    return () => window.clearInterval(id)
+    let id = 0
+    const arm = () => {
+      window.clearInterval(id)
+      const ms = document.hidden ? HIDDEN_SYNC_MS : AUTO_SYNC_MS
+      id = window.setInterval(() => {
+        void load(true)
+      }, ms)
+    }
+    arm()
+    const onVisibility = () => {
+      if (!document.hidden) void load(true)
+      arm()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [load])
 
   const rows = useMemo(() => applyDecisions(enquiries, decisions), [enquiries, decisions])
@@ -222,7 +238,12 @@ export function EnquiriesPage() {
     const permission = await enableEnquiryNotifications()
     if (permission === 'granted') {
       setAlertsOn(true)
-      showToast('Phone alerts on. New enquiries will notify this device.', 'success')
+      showToast(
+        isInstalledPwa()
+          ? 'Phone alerts on. New enquiries will show like a message notification.'
+          : 'Alerts on. For lock-screen alerts, open from your home-screen icon (Add to Home Screen).',
+        'success',
+      )
       return
     }
     setAlertsOn(false)

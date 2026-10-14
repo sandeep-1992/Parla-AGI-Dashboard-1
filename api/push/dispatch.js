@@ -10,7 +10,15 @@ export default async function handler(req, res) {
   const secret = process.env.CRON_SECRET?.trim()
   const auth = String(req.headers.authorization ?? '')
   const querySecret = String(req.query?.secret ?? '')
-  if (secret && auth !== `Bearer ${secret}` && querySecret !== secret) {
+  const isVercelCron = Boolean(req.headers['x-vercel-cron'])
+  // Cron must present the secret. Browser fan-out (no auth header) is allowed.
+  if (secret && isVercelCron && auth !== `Bearer ${secret}` && querySecret !== secret) {
+    res.statusCode = 401
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ error: 'Unauthorized' }))
+    return
+  }
+  if (secret && auth.startsWith('Bearer ') && auth !== `Bearer ${secret}` && querySecret !== secret) {
     res.statusCode = 401
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ error: 'Unauthorized' }))

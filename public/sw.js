@@ -23,6 +23,9 @@ self.addEventListener('push', (event) => {
       tag: payload.tag || 'hilton-enquiry',
       data: { url: payload.url || '/enquiries' },
       renotify: true,
+      requireInteraction: true,
+      vibrate: [160, 80, 160],
+      silent: false,
     }),
   )
 })
@@ -40,6 +43,23 @@ self.addEventListener('notificationclick', (event) => {
       }
       if (self.clients.openWindow) return self.clients.openWindow(target)
       return undefined
+    }),
+  )
+})
+
+self.addEventListener('message', (event) => {
+  const data = event.data
+  if (!data || data.type !== 'SHOW_ENQUIRY_NOTICE') return
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Hilton Inquiries', {
+      body: data.body || 'A new enquiry was received.',
+      icon: '/hilton-logo.png',
+      badge: '/favicon.png',
+      tag: data.tag || 'hilton-enquiry',
+      data: { url: data.url || '/enquiries' },
+      renotify: true,
+      requireInteraction: true,
+      vibrate: [160, 80, 160],
     }),
   )
 })

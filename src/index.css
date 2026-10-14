@@ -231,9 +231,11 @@ select {
 /* App chrome */
 .app-root {
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: #f3f6f9;
   background-image: radial-gradient(#d7dee6 1px, transparent 1px);
   background-size: 18px 18px;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .topbar {
@@ -242,7 +244,8 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1.25rem;
-  padding: 0.55rem 1.25rem;
+  padding: 0.55rem max(1rem, env(safe-area-inset-right)) 0.55rem max(1rem, env(safe-area-inset-left));
+  padding-top: max(0.55rem, env(safe-area-inset-top));
   background: #fff;
   border-bottom: 1px solid var(--line);
   position: sticky;
@@ -397,7 +400,7 @@ select {
 .page {
   max-width: 1520px;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem 2.5rem;
+  padding: 1.5rem max(1rem, env(safe-area-inset-right)) 2.5rem max(1rem, env(safe-area-inset-left));
 }
 
 .page-head {
@@ -1524,6 +1527,37 @@ button.chip-toggle {
     flex-wrap: wrap;
   }
 
+  .toolbar {
+    padding: 0.65rem;
+  }
+
+  .search-wrap {
+    min-width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .select-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .select-wrap select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .status-seg {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .status-seg-btn {
+    flex: 1 1 auto;
+    text-align: center;
+    min-height: 2.4rem;
+  }
+
   .user-name {
     display: none;
   }
@@ -1534,16 +1568,30 @@ button.chip-toggle {
 
   .page-head .btn-primary {
     width: 100%;
+    min-height: 2.75rem;
   }
 
   .page-head h1 {
     font-size: 1.3rem;
   }
 
+  .page-lead {
+    font-size: 0.84rem;
+  }
+
+  .ticket {
+    padding: 0.9rem 0.85rem 1rem;
+    border-radius: 1rem;
+  }
+
   .ticket-head,
   .ticket-aside {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .ticket-aside {
+    width: 100%;
   }
 
   .ticket-time {
@@ -1556,15 +1604,71 @@ button.chip-toggle {
 
   .ticket-body {
     grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .decision-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .btn-decision {
+    flex: 1;
+    justify-content: center;
+    min-height: 2.4rem;
+    padding: 0.45rem 0.7rem;
+  }
+
+  .alloc-card {
+    padding: 0.9rem 0.85rem 1rem;
   }
 
   .alloc-body {
     grid-template-columns: 1fr;
     justify-items: center;
+    gap: 1rem;
+  }
+
+  .alloc-donut {
+    width: 10.5rem;
+    height: 10.5rem;
   }
 
   .alloc-legend {
     width: 100%;
+  }
+
+  .alloc-row {
+    min-height: 2.55rem;
+  }
+
+  .table-pagination {
+    gap: 0.55rem;
+  }
+
+  .pager-btns .btn {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  .modal-backdrop {
+    padding: 0.5rem;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-height: 92dvh;
+    border-radius: 1rem 1rem 0.5rem 0.5rem;
+    padding: 1.1rem;
+  }
+
+  .auth-page {
+    padding: 1.25rem 1rem;
+    padding-top: max(1.25rem, env(safe-area-inset-top));
+  }
+
+  .brand-logo {
+    height: 3.6rem;
   }
 }
 
@@ -1575,5 +1679,40 @@ button.chip-toggle {
 
   .btn-signout span {
     display: none;
+  }
+
+  .chip-toggle {
+    min-height: 2.4rem;
+  }
+
+  .btn-round {
+    width: 2.55rem;
+    height: 2.55rem;
+  }
+
+  .ticket-title-row h2 {
+    font-size: 0.9rem;
+    line-height: 1.35;
+  }
+
+  .request-text {
+    font-size: 0.82rem;
+  }
+
+  .topbar {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .brand-compact .brand-logo {
+    height: 2.2rem;
+  }
+
+  .brand-name {
+    font-size: 0.78rem;
+  }
+
+  .brand-product {
+    font-size: 0.62rem;
   }
 }

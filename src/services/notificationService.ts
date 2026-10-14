@@ -29,10 +29,18 @@ export function setNotificationsWanted(on: boolean) {
   localStorage.setItem(ENABLED_KEY, on ? 'on' : 'off')
 }
 
+export function isInstalledPwa(): boolean {
+  const standalone = window.matchMedia('(display-mode: standalone)').matches
+  const iosStandalone = 'standalone' in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
+  return standalone || iosStandalone
+}
+
 export async function registerEnquiryWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!('serviceWorker' in navigator)) return null
   try {
-    return await navigator.serviceWorker.register('/sw.js')
+    const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    await navigator.serviceWorker.ready
+    return registration
   } catch {
     return null
   }
@@ -47,22 +55,25 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 }
 
 async function subscribePush(registration: ServiceWorkerRegistration) {
-  if (!('PushManager' in window)) return
+  if (!('PushManager' in window)) return false
   const res = await fetch('/api/push/vapid')
   const body = (await res.json().catch(() => ({}))) as { publicKey?: string }
-  if (!body.publicKey) return
-  const existing = await registration.pushManager.getSubscription()
-  const subscription =
-    existing ??
-    (await registration.pushManager.subscribe({
+  if (!body.publicKey) return false
+
+  let subscription = await registration.pushManager.getSubscription()
+  if (!subscription) {
+    subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(body.publicKey) as BufferSource,
-    }))
-  await fetch('/api/push/subscribe', {
+    })
+  }
+
+  const save = await fetch('/api/push/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ subscription }),
   })
+  return save.ok
 }
 
 export async function enableEnquiryNotifications(): Promise<NotificationPermission | 'unsupported'> {
@@ -75,10 +86,38 @@ export async function enableEnquiryNotifications(): Promise<NotificationPermissi
     try {
       await subscribePush(registration)
     } catch {
-      // Local alerts still work if web-push subscribe fails.
+      // Local lock-screen alerts still work via the service worker.
     }
   }
   return permission
+}
+
+async function showOsNotification(title: string, body: string, tag: string) {
+  const registration = await navigator.serviceWorker?.ready.catch(() => null)
+  const options: NotificationOptions = {
+    body,
+    icon: '/hilton-logo.png',
+    badge: '/favicon.png',
+    tag,
+    data: { url: '/enquiries' },
+    requireInteraction: true,
+    silent: false,
+  }
+
+  if (registration) {
+    await registration.showNotification(title, options)
+    return
+  }
+
+  new Notification(title, { body, icon: '/hilton-logo.png', tag })
+}
+
+async function fanOutPush() {
+  try {
+    await fetch('/api/push/dispatch', { method: 'POST' })
+  } catch {
+    // Ignore fan-out failures; local OS notification already shown.
+  }
 }
 
 export async function notifyNewEnquiries(enquiries: SalesEnquiry[]) {
@@ -94,23 +133,14 @@ export async function notifyNewEnquiries(enquiries: SalesEnquiry[]) {
   if (fresh.length === 0 || !notificationsWanted()) return
   if (!('Notification' in window) || Notification.permission !== 'granted') return
 
-  const registration = await navigator.serviceWorker?.ready.catch(() => null)
   const title = fresh.length === 1 ? 'New Hilton inquiry' : 'New Hilton inquiries'
   const first = fresh[0]
   const body =
     fresh.length === 1
       ? `${first?.guestName?.trim() || 'New guest'} · ${first?.enquiryType?.trim() || 'Enquiry'}`
       : `${fresh.length} new enquiries were received.`
+  const tag = fresh.length === 1 ? `enquiry-${enquiryKey(fresh[0]!)}` : 'enquiry-batch'
 
-  if (registration) {
-    await registration.showNotification(title, {
-      body,
-      icon: '/hilton-logo.png',
-      tag: 'hilton-enquiry',
-      data: { url: '/enquiries' },
-    })
-    return
-  }
-
-  new Notification(title, { body, icon: '/hilton-logo.png' })
+  await showOsNotification(title, body, tag)
+  void fanOutPush()
 }
