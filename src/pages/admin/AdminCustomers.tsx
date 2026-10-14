@@ -256,11 +256,11 @@ export function AdminCustomersPage() {
   return (
     <div className="admin-root">
       <header className="admin-topbar">
-        <div>
-          <h1>Parla-Ai Customers</h1>
+        <div className="admin-topbar-brand">
+          <img className="admin-logo" src="/parla-logo.png" alt="Parla" />
+          <h1>Customers</h1>
         </div>
         <div className="admin-topbar-actions">
-          <span className="admin-company">Parla-Ai</span>
           <span className="admin-user">{platformAuthService.getUser()}</span>
           <button type="button" className="btn btn-ghost" onClick={logout}>
             Sign out

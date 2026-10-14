@@ -33,8 +33,8 @@ export function AdminLoginPage() {
     <div className="auth-page admin-auth">
       <div className="auth-card">
         <div className="admin-brand">
-          <p className="admin-eyebrow">Parla-Ai</p>
-          <h1 className="admin-title">Parla-Ai Customers</h1>
+          <img className="admin-logo admin-logo-login" src="/parla-logo.png" alt="Parla" />
+          <h1 className="admin-title">Customers</h1>
           <p className="auth-lead">Sign in to create and manage customer portals.</p>
         </div>
 

@@ -1807,9 +1807,10 @@ button.chip-toggle {
 }
 
 .admin-topbar h1 {
-  margin: 0.1rem 0 0;
-  font-size: 1.35rem;
+  margin: 0;
+  font-size: 1.2rem;
   font-weight: 700;
+  color: #0f172a;
 }
 
 .admin-topbar-actions {
@@ -1818,15 +1819,23 @@ button.chip-toggle {
   gap: 0.75rem;
 }
 
-.admin-company {
-  font-size: 0.88rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #0f172a;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
-  background: #fff;
+.admin-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.admin-logo {
+  display: block;
+  height: 2.1rem;
+  width: auto;
+  object-fit: contain;
+}
+
+.admin-logo-login {
+  height: 2.6rem;
+  margin-bottom: 0.35rem;
 }
 
 .admin-user {
