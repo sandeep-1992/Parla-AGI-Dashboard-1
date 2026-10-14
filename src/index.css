@@ -1829,16 +1829,18 @@ button.chip-toggle {
 
 .admin-logo {
   display: block;
-  height: 5.75rem;
+  height: 2.35rem;
   width: auto;
+  max-width: 11rem;
   object-fit: contain;
   object-position: left center;
 }
 
 .admin-logo-login {
   display: block;
-  height: 7.5rem;
+  height: 2.75rem;
   width: auto;
+  max-width: 12rem;
   margin: 0 auto 0.85rem;
   object-fit: contain;
 }
