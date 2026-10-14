@@ -13,3 +13,4 @@ dist-ssr
 .idea
 .DS_Store
 data/push-store.json
+data/customers.json

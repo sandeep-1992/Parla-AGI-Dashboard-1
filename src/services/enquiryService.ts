@@ -45,10 +45,11 @@ function parseFeed(body: unknown): SalesEnquiry[] {
     .filter((row): row is SalesEnquiry => row != null)
 }
 
-export async function fetchSalesEnquiries(): Promise<EnquiryFeed> {
+export async function fetchSalesEnquiries(tenantSlug: string): Promise<EnquiryFeed> {
+  const slug = tenantSlug.trim().toLowerCase()
   let response: Response
   try {
-    response = await fetch('/api/enquiries', { method: 'GET' })
+    response = await fetch(`/api/enquiries?tenant=${encodeURIComponent(slug)}`, { method: 'GET' })
   } catch {
     throw new Error('Sales enquiry feed is unreachable right now. Try again in a moment.')
   }

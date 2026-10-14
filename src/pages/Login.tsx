@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../components/BrandMark'
 import { authService } from '../services/authService'
+import { fetchTenant, tenantPath } from '../services/tenantService'
+import type { TenantInfo } from '../types/tenant'
 
 function UserFieldIcon() {
   return (
@@ -35,17 +37,37 @@ function EyeIcon({ off }: { off?: boolean }) {
   )
 }
 
-export function LoginPage() {
+export function LoginPage({ tenantSlug }: { tenantSlug: string }) {
   const navigate = useNavigate()
+  const [tenant, setTenant] = useState<TenantInfo | null>(null)
+  const [missing, setMissing] = useState(false)
   const [userId, setUserId] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [bootstrapping, setBootstrapping] = useState(true)
 
-  if (authService.isAuthenticated()) {
-    return <Navigate to="/enquiries" replace />
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      setBootstrapping(true)
+      setMissing(false)
+      const current = await fetchTenant(tenantSlug)
+      if (cancelled) return
+      setTenant(current)
+      setMissing(!current)
+      setBootstrapping(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [tenantSlug])
+
+  const session = authService.getSession()
+  if (session?.user.tenantSlug === tenantSlug) {
+    return <Navigate to={tenantPath(session.user.tenantSlug, '/enquiries')} replace />
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -57,12 +79,12 @@ export function LoginPage() {
     }
     setLoading(true)
     try {
-      const result = await authService.login(userId, password, rememberMe)
+      const result = await authService.login(userId, password, rememberMe, tenantSlug)
       if (!result.ok) {
         setError(result.message ?? 'Invalid username or password.')
         return
       }
-      navigate('/enquiries', { replace: true })
+      navigate(tenantPath(result.tenantSlug || tenantSlug, '/enquiries'), { replace: true })
     } finally {
       setLoading(false)
     }
@@ -72,72 +94,82 @@ export function LoginPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <BrandMark />
+          <BrandMark tenant={tenant} />
         </div>
-        <p className="auth-lead">Sign in to Hilton Inquiries.</p>
+        <p className="auth-lead">
+          {bootstrapping
+            ? 'Loading portal…'
+            : missing
+              ? 'This customer portal was not found or is disabled.'
+              : `Sign in to ${tenant?.productName ?? 'Inquiries'}.`}
+        </p>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div>
-            <label className="auth-label" htmlFor="userId">
-              Username
-            </label>
-            <div className="auth-input-wrap">
-              <span className="auth-input-icon">
-                <UserFieldIcon />
-              </span>
-              <input
-                id="userId"
-                className="auth-input"
-                autoComplete="username"
-                placeholder="admin"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                required
-              />
+        {!missing && (
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <div>
+              <label className="auth-label" htmlFor="userId">
+                Username
+              </label>
+              <div className="auth-input-wrap">
+                <span className="auth-input-icon">
+                  <UserFieldIcon />
+                </span>
+                <input
+                  id="userId"
+                  className="auth-input"
+                  autoComplete="username"
+                  placeholder="admin"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  required
+                  disabled={bootstrapping}
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="auth-label" htmlFor="password">
-              Password
-            </label>
-            <div className="auth-input-wrap">
-              <span className="auth-input-icon">
-                <LockFieldIcon />
-              </span>
-              <input
-                id="password"
-                className="auth-input auth-input-password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                className="auth-toggle-pw"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                onClick={() => setShowPassword((v) => !v)}
-              >
-                <EyeIcon off={showPassword} />
-              </button>
+            <div>
+              <label className="auth-label" htmlFor="password">
+                Password
+              </label>
+              <div className="auth-input-wrap">
+                <span className="auth-input-icon">
+                  <LockFieldIcon />
+                </span>
+                <input
+                  id="password"
+                  className="auth-input auth-input-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={bootstrapping}
+                />
+                <button
+                  type="button"
+                  className="auth-toggle-pw"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  <EyeIcon off={showPassword} />
+                </button>
+              </div>
             </div>
-          </div>
 
-          <label className="auth-check-row">
-            <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
-            Remember me
-          </label>
+            <label className="auth-check-row">
+              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+              Remember me
+            </label>
 
-          {error && <p className="auth-error">{error}</p>}
+            {error && <p className="auth-error">{error}</p>}
 
-          <button type="submit" className="auth-submit" disabled={loading}>
-            {loading ? 'Signing in…' : 'Continue'}
-            {!loading && <span aria-hidden="true">→</span>}
-          </button>
-        </form>
+            <button type="submit" className="auth-submit" disabled={loading || bootstrapping || !tenant}>
+              {loading ? 'Signing in…' : 'Continue'}
+              {!loading && <span aria-hidden="true">→</span>}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )

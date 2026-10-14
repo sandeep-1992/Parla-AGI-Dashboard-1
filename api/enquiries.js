@@ -1,6 +1,5 @@
+import { resolveCustomer } from '../lib/customers.js'
 import { fetchWithRetry, formatUpstreamError } from '../lib/upstream.js'
-
-const DEFAULT_WEBHOOK = 'https://engine.auriforce.com/webhook/fetch-sales-enquiry'
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,10 +9,19 @@ export default async function handler(req, res) {
     return
   }
 
-  const webhookUrl = process.env.SALES_ENQUIRY_WEBHOOK_URL?.trim() || DEFAULT_WEBHOOK
+  const tenant = await resolveCustomer({
+    slug: String(req.query?.tenant ?? ''),
+    host: req.headers.host,
+  })
+  if (!tenant) {
+    res.statusCode = 404
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ error: 'Customer portal not found' }))
+    return
+  }
 
   try {
-    const upstream = await fetchWithRetry(webhookUrl, { method: 'GET' })
+    const upstream = await fetchWithRetry(tenant.webhookUrl, { method: 'GET' })
     const text = await upstream.text()
     res.setHeader('Content-Type', 'application/json')
 
@@ -29,13 +37,23 @@ export default async function handler(req, res) {
 
     if (!text.trim()) {
       res.statusCode = 200
-      res.end(JSON.stringify({ count: 0, enquiries: [] }))
+      res.end(JSON.stringify({ count: 0, enquiries: [], tenant: tenant.slug }))
       return
     }
 
     try {
+      const parsed = JSON.parse(text)
       res.statusCode = 200
-      res.end(JSON.stringify(JSON.parse(text)))
+      if (Array.isArray(parsed)) {
+        res.end(JSON.stringify({ count: parsed.length, enquiries: parsed, tenant: tenant.slug }))
+      } else {
+        res.end(
+          JSON.stringify({
+            ...(parsed && typeof parsed === 'object' ? parsed : {}),
+            tenant: tenant.slug,
+          }),
+        )
+      }
     } catch {
       res.statusCode = 502
       res.end(JSON.stringify({ error: 'Enquiry webhook returned invalid JSON' }))

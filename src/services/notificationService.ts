@@ -1,7 +1,12 @@
 import type { SalesEnquiry } from '../types/enquiry'
 
-const SEEN_KEY = 'hilton-inquiries.seen-ids'
-const ENABLED_KEY = 'hilton-inquiries.notifications'
+function seenKey(tenantId: string) {
+  return `hilton-inquiries.${tenantId || 'default'}.seen-ids`
+}
+
+function enabledKey(tenantId: string) {
+  return `hilton-inquiries.${tenantId || 'default'}.notifications`
+}
 
 export type AlertEnableResult =
   | 'granted'
@@ -14,9 +19,9 @@ function enquiryKey(row: SalesEnquiry): string {
   return String(row.id || row.conversationId || '')
 }
 
-function readSeen(): Set<string> {
+function readSeen(tenantId: string): Set<string> {
   try {
-    const raw = localStorage.getItem(SEEN_KEY)
+    const raw = localStorage.getItem(seenKey(tenantId))
     const parsed = raw ? (JSON.parse(raw) as unknown) : []
     return new Set(Array.isArray(parsed) ? parsed.map(String) : [])
   } catch {
@@ -24,16 +29,16 @@ function readSeen(): Set<string> {
   }
 }
 
-function writeSeen(ids: Iterable<string>) {
-  localStorage.setItem(SEEN_KEY, JSON.stringify([...ids]))
+function writeSeen(tenantId: string, ids: Iterable<string>) {
+  localStorage.setItem(seenKey(tenantId), JSON.stringify([...ids]))
 }
 
-export function notificationsWanted(): boolean {
-  return localStorage.getItem(ENABLED_KEY) === 'on'
+export function notificationsWanted(tenantId: string): boolean {
+  return localStorage.getItem(enabledKey(tenantId)) === 'on'
 }
 
-export function setNotificationsWanted(on: boolean) {
-  localStorage.setItem(ENABLED_KEY, on ? 'on' : 'off')
+export function setNotificationsWanted(tenantId: string, on: boolean) {
+  localStorage.setItem(enabledKey(tenantId), on ? 'on' : 'off')
 }
 
 export function isInstalledPwa(): boolean {
@@ -68,7 +73,7 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return output
 }
 
-async function subscribePush(registration: ServiceWorkerRegistration) {
+async function subscribePush(registration: ServiceWorkerRegistration, tenantId: string) {
   if (!('PushManager' in window)) return false
   const res = await fetch('/api/push/vapid')
   const body = (await res.json().catch(() => ({}))) as { publicKey?: string }
@@ -85,19 +90,19 @@ async function subscribePush(registration: ServiceWorkerRegistration) {
   const save = await fetch('/api/push/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subscription }),
+    body: JSON.stringify({ subscription, tenantId }),
   })
   return save.ok
 }
 
-async function showOsNotification(title: string, body: string, tag: string) {
+async function showOsNotification(title: string, body: string, tag: string, url: string) {
   const registration = await navigator.serviceWorker?.ready.catch(() => null)
   const options: NotificationOptions = {
     body,
     icon: '/hilton-logo.png',
     badge: '/favicon.png',
     tag,
-    data: { url: '/enquiries' },
+    data: { url },
     requireInteraction: true,
     silent: false,
   }
@@ -112,7 +117,10 @@ async function showOsNotification(title: string, body: string, tag: string) {
   }
 }
 
-export async function enableEnquiryNotifications(): Promise<AlertEnableResult> {
+export async function enableEnquiryNotifications(
+  tenantId: string,
+  tenantSlug = tenantId,
+): Promise<AlertEnableResult> {
   if (!('Notification' in window)) {
     if (isIosDevice() && !isInstalledPwa()) return 'needs-homescreen'
     return 'unsupported'
@@ -122,55 +130,55 @@ export async function enableEnquiryNotifications(): Promise<AlertEnableResult> {
     return 'unsupported'
   }
 
-  // iPhone/iPad only allow real OS notifications from the home-screen app.
   if (isIosDevice() && !isInstalledPwa()) {
     return 'needs-homescreen'
   }
 
-  setNotificationsWanted(true)
+  setNotificationsWanted(tenantId, true)
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return permission
 
   const registration = await registerEnquiryWorker()
   if (registration) {
     try {
-      await subscribePush(registration)
+      await subscribePush(registration, tenantId)
     } catch {
       // Local OS alerts still work without push subscribe.
     }
   }
 
   await showOsNotification(
-    'Hilton alerts ready',
+    'Alerts ready',
     'You will get a phone notification when a new enquiry arrives.',
     'hilton-alert-test',
+    `/t/${tenantSlug}/enquiries`,
   )
 
   return 'granted'
 }
 
-async function fanOutPush() {
+async function fanOutPush(tenantId: string) {
   try {
-    await fetch('/api/push/dispatch', { method: 'POST' })
+    await fetch(`/api/push/dispatch?tenant=${encodeURIComponent(tenantId)}`, { method: 'POST' })
   } catch {
     // Ignore fan-out failures; local OS notification already shown.
   }
 }
 
-export async function notifyNewEnquiries(enquiries: SalesEnquiry[]) {
+export async function notifyNewEnquiries(tenantId: string, enquiries: SalesEnquiry[], tenantSlug: string) {
   const keys = enquiries.map(enquiryKey).filter(Boolean)
-  const seen = readSeen()
+  const seen = readSeen(tenantId)
   if (seen.size === 0) {
-    writeSeen(keys)
+    writeSeen(tenantId, keys)
     return
   }
 
   const fresh = enquiries.filter((row) => !seen.has(enquiryKey(row)))
-  writeSeen([...seen, ...keys])
-  if (fresh.length === 0 || !notificationsWanted()) return
+  writeSeen(tenantId, [...seen, ...keys])
+  if (fresh.length === 0 || !notificationsWanted(tenantId)) return
   if (!('Notification' in window) || Notification.permission !== 'granted') return
 
-  const title = fresh.length === 1 ? 'New Hilton inquiry' : 'New Hilton inquiries'
+  const title = fresh.length === 1 ? 'New inquiry' : 'New inquiries'
   const first = fresh[0]
   const body =
     fresh.length === 1
@@ -178,6 +186,6 @@ export async function notifyNewEnquiries(enquiries: SalesEnquiry[]) {
       : `${fresh.length} new enquiries were received.`
   const tag = fresh.length === 1 ? `enquiry-${enquiryKey(fresh[0]!)}` : 'enquiry-batch'
 
-  await showOsNotification(title, body, tag)
-  void fanOutPush()
+  await showOsNotification(title, body, tag, `/t/${tenantSlug}/enquiries`)
+  void fanOutPush(tenantId)
 }

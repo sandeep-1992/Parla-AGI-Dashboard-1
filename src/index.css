@@ -161,6 +161,16 @@ select {
   outline: none;
 }
 
+select.auth-input {
+  padding-left: 1rem;
+  padding-right: 2.25rem;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2394a3b8' d='M1.4 1.2L6 5.6l4.6-4.4 1.2 1.3L6 8.2.2 2.5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  cursor: pointer;
+}
+
 .auth-input-password {
   padding-right: 2.75rem;
 }
@@ -1745,5 +1755,477 @@ button.chip-toggle {
 
   .brand-product {
     font-size: 0.62rem;
+  }
+}
+
+/* —— Platform admin —— */
+.auth-input-plain {
+  padding-left: 1rem;
+}
+
+.admin-auth .auth-card {
+  max-width: 28rem;
+}
+
+.admin-brand {
+  text-align: left;
+  margin-bottom: 0.5rem;
+}
+
+.admin-eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.admin-title {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 1.55rem;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.admin-root {
+  min-height: 100vh;
+  background: #f4f5f7;
+  color: #0f172a;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.admin-topbar h1 {
+  margin: 0.1rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-user {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.admin-main {
+  padding: 1.25rem 1.5rem 2.5rem;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.admin-banner {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 0.88rem;
+}
+
+.admin-ok {
+  margin: 0 0 1rem;
+  color: #166534;
+  font-size: 0.9rem;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1.05rem 1.15rem 1.2rem;
+}
+
+.admin-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.admin-panel-head.stacked {
+  align-items: center;
+}
+
+.admin-panel-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.admin-sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 220px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  color: #94a3b8;
+  background: #fff;
+}
+
+.admin-search input {
+  border: 0;
+  outline: none;
+  width: 100%;
+  font: inherit;
+  font-size: 0.86rem;
+  color: #0f172a;
+  background: transparent;
+}
+
+.admin-card-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tenant-card {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid #eceff3;
+  border-radius: 12px;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tenant-card.on,
+.tenant-card:hover {
+  border-color: #dbe1ea;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.tenant-card-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.tenant-card-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tenant-card-title h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.tenant-product {
+  margin: 0.28rem 0 0.55rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.tenant-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 0.9rem;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.tenant-meta code {
+  font-size: 0.78rem;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 6px;
+  padding: 0.1rem 0.35rem;
+}
+
+.tenant-meta .muted {
+  color: #94a3b8;
+}
+
+.tenant-webhook {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+  max-width: 100%;
+  color: #2563eb;
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.tenant-webhook span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tenant-webhook:hover {
+  text-decoration: underline;
+}
+
+.tenant-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  max-width: 230px;
+}
+
+.btn-launch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.9rem;
+  border-radius: 9px;
+  background: #111827;
+  color: #fff !important;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 0;
+  white-space: nowrap;
+}
+
+.btn-launch:hover {
+  background: #000;
+}
+
+.icon-btn {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.icon-btn.danger:hover {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.admin-pill {
+  display: inline-flex;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.admin-pill.on {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.admin-pill.off {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.admin-empty {
+  margin: 0;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.admin-form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.label-row em {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.text-link {
+  border: 0;
+  background: none;
+  color: #2563eb;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.text-link:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.admin-form input[type='text'],
+.admin-form input[type='password'],
+.admin-form input:not([type]) {
+  width: 100%;
+  padding: 0.72rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  font: inherit;
+  font-weight: 400;
+  color: #0f172a;
+  background: #fff;
+}
+
+.admin-form input:focus {
+  outline: none;
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.05);
+}
+
+.admin-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.pw-wrap {
+  position: relative;
+}
+
+.pw-wrap input {
+  padding-right: 2.5rem;
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  color: #94a3b8;
+  display: flex;
+  cursor: pointer;
+  padding: 0.2rem;
+}
+
+.admin-hint {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-weight: 400;
+  word-break: break-all;
+}
+
+.admin-check {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  grid-template-columns: none !important;
+  font-weight: 550 !important;
+}
+
+.btn-create {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.btn-create:hover:not(:disabled) {
+  background: #000;
+}
+
+.btn-create:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+@media (max-width: 960px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-search {
+    min-width: 0;
+  }
+
+  .tenant-card {
+    flex-direction: column;
+  }
+
+  .tenant-card-actions {
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .admin-topbar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

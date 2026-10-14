@@ -4,7 +4,13 @@
   "rewrites": [
     { "source": "/login", "destination": "/" },
     { "source": "/enquiries", "destination": "/" },
-    { "source": "/dashboard", "destination": "/" }
+    { "source": "/dashboard", "destination": "/" },
+    { "source": "/admin", "destination": "/" },
+    { "source": "/admin/login", "destination": "/" },
+    { "source": "/admin/customers", "destination": "/" },
+    { "source": "/t/:tenantSlug/login", "destination": "/" },
+    { "source": "/t/:tenantSlug/enquiries", "destination": "/" },
+    { "source": "/t/:tenantSlug", "destination": "/" }
   ],
   "headers": [
     {

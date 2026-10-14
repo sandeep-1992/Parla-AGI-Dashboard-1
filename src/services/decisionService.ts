@@ -1,10 +1,13 @@
 import type { EnquiryDecision } from '../types/enquiry'
 
-const STORAGE_KEY = 'hilton-t5-sales-enquiries.decisions'
+function storageKey(tenantId: string) {
+  return `hilton-inquiries.${tenantId}.decisions`
+}
 
-export function loadDecisions(): Record<string, EnquiryDecision> {
+export function loadDecisions(tenantId: string): Record<string, EnquiryDecision> {
+  if (!tenantId) return {}
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(storageKey(tenantId))
     if (!raw) return {}
     const parsed = JSON.parse(raw) as Record<string, EnquiryDecision>
     return parsed && typeof parsed === 'object' ? parsed : {}
@@ -13,9 +16,13 @@ export function loadDecisions(): Record<string, EnquiryDecision> {
   }
 }
 
-export function saveDecision(enquiryId: number, decision: EnquiryDecision): Record<string, EnquiryDecision> {
-  const next = { ...loadDecisions(), [String(enquiryId)]: decision }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+export function saveDecision(
+  tenantId: string,
+  enquiryId: number,
+  decision: EnquiryDecision,
+): Record<string, EnquiryDecision> {
+  const next = { ...loadDecisions(tenantId), [String(enquiryId)]: decision }
+  localStorage.setItem(storageKey(tenantId), JSON.stringify(next))
   return next
 }
 

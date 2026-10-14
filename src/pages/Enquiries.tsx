@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { AppShell } from '../components/AppShell'
 import { ConversationModal } from '../components/ConversationModal'
 import {
@@ -27,6 +27,7 @@ import {
   notificationsWanted,
   setNotificationsWanted,
 } from '../services/notificationService'
+import { tenantPath } from '../services/tenantService'
 import type { EnquiryDecision, SalesEnquiry, SortKey } from '../types/enquiry'
 import { downloadText, enquiriesToCsv } from '../utils/export'
 import {
@@ -55,11 +56,17 @@ const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
 
 export function EnquiriesPage() {
   const navigate = useNavigate()
+  const { tenantSlug: routeSlug = '' } = useParams()
   const user = authService.getCurrentUser()
+  const tenant = authService.getTenant()
+  const tenantId = user?.tenantId ?? ''
+  const tenantSlug = user?.tenantSlug || routeSlug
   const { showToast } = useToast()
 
   const [enquiries, setEnquiries] = useState<SalesEnquiry[]>([])
-  const [decisions, setDecisions] = useState<Record<string, EnquiryDecision>>(() => loadDecisions())
+  const [decisions, setDecisions] = useState<Record<string, EnquiryDecision>>(() =>
+    loadDecisions(tenantId),
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -71,40 +78,49 @@ export function EnquiriesPage() {
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [syncedAt, setSyncedAt] = useState<Date | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
-  const [alertsOn, setAlertsOn] = useState(() => notificationsWanted())
+  const [alertsOn, setAlertsOn] = useState(() => notificationsWanted(tenantId))
   const hasLoadedRef = useRef(false)
 
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true)
-    if (!silent) setError('')
-    try {
-      const feed = await fetchSalesEnquiries()
-      const next = applyDecisions(feed.enquiries, loadDecisions())
-      await notifyNewEnquiries(next)
-      setEnquiries(next)
-      setSyncedAt(new Date())
-      setError('')
-      hasLoadedRef.current = true
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load enquiries'
-      if (!silent || !hasLoadedRef.current) {
-        setError(message)
+  useEffect(() => {
+    setDecisions(loadDecisions(tenantId))
+    setAlertsOn(notificationsWanted(tenantId))
+  }, [tenantId])
+
+  const load = useCallback(
+    async (silent = false) => {
+      if (!tenantSlug) return
+      if (!silent) setLoading(true)
+      if (!silent) setError('')
+      try {
+        const feed = await fetchSalesEnquiries(tenantSlug)
+        const next = applyDecisions(feed.enquiries, loadDecisions(tenantId))
+        await notifyNewEnquiries(tenantId, next, tenantSlug)
+        setEnquiries(next)
+        setSyncedAt(new Date())
+        setError('')
+        hasLoadedRef.current = true
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to load enquiries'
+        if (!silent || !hasLoadedRef.current) {
+          setError(message)
+        }
+        if (!silent) setEnquiries([])
+      } finally {
+        setLoading(false)
       }
-      if (!silent) setEnquiries([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    },
+    [tenantId, tenantSlug],
+  )
 
   useEffect(() => {
     void load()
   }, [load])
 
   useEffect(() => {
-    if (!alertsOn) return
+    if (!alertsOn || !tenantId) return
     if (!('Notification' in window) || Notification.permission !== 'granted') return
-    void enableEnquiryNotifications()
-  }, [alertsOn])
+    void enableEnquiryNotifications(tenantId, tenantSlug)
+  }, [alertsOn, tenantId, tenantSlug])
 
   useEffect(() => {
     let id = 0
@@ -205,7 +221,7 @@ export function EnquiriesPage() {
   }
 
   function decide(enquiry: SalesEnquiry, decision: EnquiryDecision) {
-    setDecisions(saveDecision(enquiry.id, decision))
+    setDecisions(saveDecision(tenantId, enquiry.id, decision))
     showToast(
       decision === 'accepted' ? `Enquiry #${enquiry.id} accepted` : `Enquiry #${enquiry.id} rejected`,
       decision === 'accepted' ? 'success' : 'info',
@@ -224,17 +240,17 @@ export function EnquiriesPage() {
   function handleLogout() {
     setLoggingOut(true)
     authService.logout()
-    navigate('/login', { replace: true })
+    navigate(tenantPath(tenantSlug || 'hilton-t5', '/login'), { replace: true })
   }
 
   async function toggleAlerts() {
     if (alertsOn) {
-      setNotificationsWanted(false)
+      setNotificationsWanted(tenantId, false)
       setAlertsOn(false)
       showToast('Phone alerts off', 'info')
       return
     }
-    const permission = await enableEnquiryNotifications()
+    const permission = await enableEnquiryNotifications(tenantId, tenantSlug)
     if (permission === 'granted') {
       setAlertsOn(true)
       showToast('Phone alerts on. A test notification was sent — check your phone shade.', 'success')
@@ -256,16 +272,17 @@ export function EnquiriesPage() {
     )
   }
 
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to={tenantPath(routeSlug || 'hilton-t5', '/login')} replace />
 
   return (
-    <AppShell userId={user.userId} onLogout={handleLogout} loggingOut={loggingOut}>
+    <AppShell userId={user.userId} tenant={tenant} onLogout={handleLogout} loggingOut={loggingOut}>
       <main className="page">
         <div className="page-head">
           <div>
-            <h1>Hilton Inquiries</h1>
+            <h1>{tenant?.productName ?? 'Inquiries'}</h1>
             <p className="page-lead">
-              Guest room requests, corporate quotes, and concierge inquiries for Hilton Heathrow Terminal 5.
+              Guest room requests, corporate quotes, and concierge inquiries for{' '}
+              {tenant?.name ?? 'this hotel'}.
             </p>
           </div>
           <button type="button" className="btn btn-primary" onClick={() => void load()} disabled={loading}>

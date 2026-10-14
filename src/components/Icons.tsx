@@ -192,3 +192,57 @@ export function IconSort({ className }: IconProps) {
     </svg>
   )
 }
+
+export function IconEdit({ className }: IconProps) {
+  return (
+    <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 20h4.2L19 9.2 14.8 5 4 15.8V20z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M13.2 6.6l4.2 4.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function IconTrash({ className }: IconProps) {
+  return (
+    <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 7h14M9 7V5h6v2M8 7l.8 12h6.4L16 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function IconPower({ className }: IconProps) {
+  return (
+    <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3v9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M7.2 6.4a7 7 0 109.6 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function IconDuplicate({ className }: IconProps) {
+  return (
+    <svg className={className} width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="8" y="8" width="11" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2h2" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  )
+}
+
+export function IconLink({ className }: IconProps) {
+  return (
+    <svg className={className} width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M10 14a4 4 0 010-5.7l2-2a4 4 0 015.7 5.7l-1 1"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 10a4 4 0 010 5.7l-2 2a4 4 0 01-5.7-5.7l1-1"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}

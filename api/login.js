@@ -1,7 +1,5 @@
 import { timingSafeEqual } from 'node:crypto'
-
-const DEFAULT_USER = 'admin'
-const DEFAULT_PASSWORD = 'Hilton'
+import { publicCustomer, resolveCustomer } from '../lib/customers.js'
 
 function passwordsMatch(left, right) {
   const a = Buffer.from(String(left))
@@ -38,13 +36,11 @@ export default async function handler(req, res) {
     return
   }
 
-  const username = process.env.AUTH_USERNAME?.trim() || DEFAULT_USER
-  const password = process.env.AUTH_PASSWORD || DEFAULT_PASSWORD
-
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : await readBody(req)
     const userId = String(body.userId ?? body.username ?? '').trim()
     const submitted = String(body.password ?? '')
+    const tenantSlug = String(body.tenant ?? body.tenantSlug ?? '').trim()
 
     if (!userId || !submitted) {
       res.statusCode = 400
@@ -53,7 +49,25 @@ export default async function handler(req, res) {
       return
     }
 
-    if (userId.toLowerCase() !== username.toLowerCase() || !passwordsMatch(submitted, password)) {
+    if (!tenantSlug) {
+      res.statusCode = 400
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ ok: false, message: 'Customer portal is required.' }))
+      return
+    }
+
+    const tenant = await resolveCustomer({
+      slug: tenantSlug,
+      host: req.headers.host,
+    })
+    if (!tenant) {
+      res.statusCode = 404
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ ok: false, message: 'Customer portal not found or disabled.' }))
+      return
+    }
+
+    if (userId.toLowerCase() !== tenant.username.toLowerCase() || !passwordsMatch(submitted, tenant.password)) {
       res.statusCode = 401
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify({ ok: false, message: 'Invalid username or password.' }))
@@ -62,7 +76,13 @@ export default async function handler(req, res) {
 
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify({ ok: true, userId: username }))
+    res.end(
+      JSON.stringify({
+        ok: true,
+        userId: tenant.username,
+        tenant: publicCustomer(tenant),
+      }),
+    )
   } catch {
     res.statusCode = 400
     res.setHeader('Content-Type', 'application/json')

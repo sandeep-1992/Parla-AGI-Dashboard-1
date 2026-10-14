@@ -1,21 +1,23 @@
 import type { ReactNode } from 'react'
+import type { TenantInfo } from '../types/tenant'
 import { BrandMark } from './BrandMark'
 import { IconSignOut } from './Icons'
 import { initials } from '../utils/format'
 
 interface AppShellProps {
   userId: string
+  tenant?: TenantInfo | null
   onLogout: () => void
   loggingOut?: boolean
   children: ReactNode
 }
 
-export function AppShell({ userId, onLogout, loggingOut = false, children }: AppShellProps) {
+export function AppShell({ userId, tenant, onLogout, loggingOut = false, children }: AppShellProps) {
   return (
     <div className="app-root">
       <header className="topbar">
         <div className="topbar-left">
-          <BrandMark compact />
+          <BrandMark compact tenant={tenant} />
         </div>
 
         <div className="topbar-right">

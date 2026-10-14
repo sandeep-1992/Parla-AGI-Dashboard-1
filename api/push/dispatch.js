@@ -26,7 +26,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const result = await dispatchNewEnquiryPushes()
+    const tenantSlug = String(req.query?.tenant ?? '')
+    const result = await dispatchNewEnquiryPushes(tenantSlug || undefined)
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ ok: true, ...result }))
