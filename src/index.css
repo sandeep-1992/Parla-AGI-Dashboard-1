@@ -1860,7 +1860,7 @@ button.chip-toggle {
 
 .admin-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
   gap: 1rem;
   align-items: start;
   width: 100%;
@@ -1938,9 +1938,9 @@ button.chip-toggle {
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 0.85rem 1.1rem;
-  width: fit-content;
-  max-width: 100%;
+  gap: 0.85rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
   padding: 1rem 1.05rem;
   border: 1px solid #eceff3;
   border-radius: 12px;
@@ -1956,8 +1956,7 @@ button.chip-toggle {
 
 .tenant-card-main {
   min-width: 0;
-  flex: 0 1 auto;
-  max-width: 36rem;
+  flex: 1 1 16rem;
 }
 
 .tenant-card-title {
@@ -2246,11 +2245,6 @@ button.chip-toggle {
   .tenant-card {
     flex-direction: column;
     align-items: flex-start;
-    width: 100%;
-  }
-
-  .tenant-card-main {
-    max-width: none;
   }
 
   .tenant-card-actions {
