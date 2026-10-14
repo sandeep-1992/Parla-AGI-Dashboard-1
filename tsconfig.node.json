@@ -15,5 +15,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "lib/upstream.d.ts"]
+  "include": ["vite.config.ts", "lib/upstream.d.ts", "lib/push.d.ts"]
 }

@@ -3,11 +3,16 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { AppShell } from '../components/AppShell'
 import { ConversationModal } from '../components/ConversationModal'
 import {
+  IconBell,
   IconCheck,
+  IconChevron,
+  IconClock,
   IconClose,
   IconCsv,
+  IconDepartment,
   IconFilter,
-  IconPin,
+  IconMail,
+  IconPhone,
   IconRefresh,
   IconSearch,
 } from '../components/Icons'
@@ -16,20 +21,36 @@ import { useToast } from '../hooks/useToast'
 import { authService } from '../services/authService'
 import { applyDecisions, loadDecisions, saveDecision } from '../services/decisionService'
 import { fetchSalesEnquiries } from '../services/enquiryService'
+import {
+  enableEnquiryNotifications,
+  notifyNewEnquiries,
+  notificationsWanted,
+  setNotificationsWanted,
+} from '../services/notificationService'
 import type { EnquiryDecision, SalesEnquiry, SortKey } from '../types/enquiry'
 import { downloadText, enquiriesToCsv } from '../utils/export'
 import {
   displayEnquiryText,
   displayEnquiryType,
   displayGuestName,
+  departmentAllocation,
+  departmentDonutSegments,
+  displayRequestBody,
+  enquiryDepartment,
   formatReceived,
   guestInitial,
-  hasPhone,
-  isSalesBooking,
 } from '../utils/format'
+
+type StatusFilter = 'all' | 'pending' | 'accepted' | 'resolved'
 
 const AUTO_SYNC_MS = 30_000
 const PAGE_SIZES = [10, 25, 50]
+const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'accepted', label: 'Accepted' },
+  { id: 'resolved', label: 'Resolved' },
+]
 
 export function EnquiriesPage() {
   const navigate = useNavigate()
@@ -42,12 +63,14 @@ export function EnquiriesPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
-  const [autoSync, setAutoSync] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [departmentFilter, setDepartmentFilter] = useState('all')
   const sortKey: SortKey = 'id'
   const [pageSize, setPageSize] = useState(10)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [syncedAt, setSyncedAt] = useState<Date | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [alertsOn, setAlertsOn] = useState(() => notificationsWanted())
   const hasLoadedRef = useRef(false)
 
   const load = useCallback(async (silent = false) => {
@@ -55,7 +78,9 @@ export function EnquiriesPage() {
     if (!silent) setError('')
     try {
       const feed = await fetchSalesEnquiries()
-      setEnquiries(applyDecisions(feed.enquiries, loadDecisions()))
+      const next = applyDecisions(feed.enquiries, loadDecisions())
+      await notifyNewEnquiries(next)
+      setEnquiries(next)
       setSyncedAt(new Date())
       setError('')
       hasLoadedRef.current = true
@@ -75,12 +100,17 @@ export function EnquiriesPage() {
   }, [load])
 
   useEffect(() => {
-    if (!autoSync) return
+    if (!alertsOn) return
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    void enableEnquiryNotifications()
+  }, [alertsOn])
+
+  useEffect(() => {
     const id = window.setInterval(() => {
       void load(true)
     }, AUTO_SYNC_MS)
     return () => window.clearInterval(id)
-  }, [autoSync, load])
+  }, [load])
 
   const rows = useMemo(() => applyDecisions(enquiries, decisions), [enquiries, decisions])
 
@@ -89,11 +119,14 @@ export function EnquiriesPage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b))
   }, [rows])
 
-  const filtered = useMemo(() => {
+  const scoped = useMemo(() => {
     const q = search.trim().toLowerCase()
-    const next = rows.filter((row) => {
+    return rows.filter((row) => {
       const type = displayEnquiryType(row)
       if (typeFilter !== 'all' && type !== typeFilter) return false
+      if (statusFilter === 'pending' && row.decision) return false
+      if (statusFilter === 'accepted' && row.decision !== 'accepted') return false
+      if (statusFilter === 'resolved' && row.decision !== 'rejected') return false
       if (!q) return true
       const haystack = [
         String(row.id),
@@ -109,6 +142,13 @@ export function EnquiriesPage() {
         .toLowerCase()
       return haystack.includes(q)
     })
+  }, [rows, search, typeFilter, statusFilter])
+
+  const filtered = useMemo(() => {
+    const next =
+      departmentFilter === 'all'
+        ? scoped
+        : scoped.filter((row) => enquiryDepartment(row) === departmentFilter)
 
     return [...next].sort((a, b) => {
       if (sortKey === 'id') return b.id - a.id
@@ -119,9 +159,9 @@ export function EnquiriesPage() {
       const right = sortKey === 'guestName' ? displayGuestName(b) : displayEnquiryType(b)
       return left.localeCompare(right)
     })
-  }, [rows, search, typeFilter, sortKey])
+  }, [scoped, departmentFilter, sortKey])
 
-  const resetKey = `${search}|${typeFilter}|${sortKey}|${pageSize}|${filtered.length}`
+  const resetKey = `${search}|${typeFilter}|${statusFilter}|${departmentFilter}|${sortKey}|${pageSize}|${filtered.length}`
   const {
     pageRows,
     page,
@@ -129,17 +169,25 @@ export function EnquiriesPage() {
     total,
     canPrev,
     canNext,
-    rangeStart,
-    rangeEnd,
     goPrev,
     goNext,
   } = usePagedRows(filtered, pageSize, resetKey)
 
-  const stats = useMemo(() => {
-    const sales = rows.filter(isSalesBooking).length
-    const phone = rows.filter(hasPhone).length
-    return { total: rows.length, sales, phone }
-  }, [rows])
+  const allocation = useMemo(() => departmentAllocation(scoped), [scoped])
+  const allocationTotal = scoped.length
+  const donutSegments = useMemo(
+    () => departmentDonutSegments(allocation, allocationTotal),
+    [allocation, allocationTotal],
+  )
+  const activePct = useMemo(() => {
+    if (allocationTotal === 0) return 0
+    const active = scoped.filter((row) => row.decision !== 'rejected').length
+    return Math.round((active / allocationTotal) * 100)
+  }, [scoped, allocationTotal])
+
+  function selectDepartment(name: string) {
+    setDepartmentFilter((current) => (current === name ? 'all' : name))
+  }
 
   function decide(enquiry: SalesEnquiry, decision: EnquiryDecision) {
     setDecisions(saveDecision(enquiry.id, decision))
@@ -164,6 +212,28 @@ export function EnquiriesPage() {
     navigate('/login', { replace: true })
   }
 
+  async function toggleAlerts() {
+    if (alertsOn) {
+      setNotificationsWanted(false)
+      setAlertsOn(false)
+      showToast('Phone alerts off', 'info')
+      return
+    }
+    const permission = await enableEnquiryNotifications()
+    if (permission === 'granted') {
+      setAlertsOn(true)
+      showToast('Phone alerts on. New enquiries will notify this device.', 'success')
+      return
+    }
+    setAlertsOn(false)
+    showToast(
+      permission === 'unsupported'
+        ? 'This browser cannot show phone alerts.'
+        : 'Allow notifications in the phone prompt, then try again.',
+      'error',
+    )
+  }
+
   if (!user) return <Navigate to="/login" replace />
 
   return (
@@ -181,22 +251,78 @@ export function EnquiriesPage() {
           </button>
         </div>
 
-        <section className="kpi-grid">
-          <article className="kpi-card">
-            <p className="kpi-label">Total Enquiries</p>
-            <p className="kpi-value">{stats.total}</p>
-            <p className="kpi-sub">records</p>
-          </article>
-          <article className="kpi-card">
-            <p className="kpi-label">Sales &amp; Bookings</p>
-            <p className="kpi-value kpi-success">{stats.sales}</p>
-            <p className="kpi-sub kpi-success">active requests</p>
-          </article>
-          <article className="kpi-card">
-            <p className="kpi-label">Direct Phone Outreach</p>
-            <p className="kpi-value">{stats.phone}</p>
-            <p className="kpi-sub">contactable</p>
-          </article>
+        <section className="alloc-card">
+          <div className="alloc-head">
+            <span className="alloc-icon">
+              <IconDepartment />
+            </span>
+            <h2>Department Allocation</h2>
+          </div>
+          <div className="alloc-body">
+            <div className="alloc-donut">
+              <svg className="alloc-svg" viewBox="0 0 100 100" role="img" aria-label="Department allocation chart">
+                {donutSegments.length === 0 ? (
+                  <circle cx="50" cy="50" r="37" fill="none" stroke="#e2e8f0" strokeWidth="16" />
+                ) : (
+                  donutSegments.map((segment) => {
+                    const selected = departmentFilter === segment.name
+                    const dimmed = departmentFilter !== 'all' && !selected
+                    return (
+                      <path
+                        key={segment.name}
+                        className={`alloc-seg ${selected ? 'on' : ''} ${dimmed ? 'dim' : ''}`}
+                        d={segment.path}
+                        fill={segment.color}
+                        onClick={() => selectDepartment(segment.name)}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Filter ${segment.name}`}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            selectDepartment(segment.name)
+                          }
+                        }}
+                      />
+                    )
+                  })
+                )}
+              </svg>
+              <button
+                type="button"
+                className="alloc-hole"
+                onClick={() => setDepartmentFilter('all')}
+                aria-label="Clear department filter"
+              >
+                <p className="alloc-total">{allocationTotal}</p>
+                <p className="alloc-kicker">Inquiries</p>
+                <p className="alloc-active">{activePct}% active</p>
+              </button>
+            </div>
+            <ul className="alloc-legend">
+              {allocation.length === 0 ? (
+                <li className="alloc-empty">No enquiries in this view</li>
+              ) : (
+                allocation.map((slice) => {
+                  const selected = departmentFilter === slice.name
+                  return (
+                    <li key={`${slice.name}-${slice.count}-${slice.percent}`}>
+                      <button
+                        type="button"
+                        className={`alloc-row ${selected ? 'on' : ''}`}
+                        onClick={() => selectDepartment(slice.name)}
+                      >
+                        <span className="alloc-dot" style={{ background: slice.color }} />
+                        <span className="alloc-name">{slice.name}</span>
+                        <span className="alloc-pct">{slice.percent}%</span>
+                        <span className="alloc-count">{slice.count}</span>
+                      </button>
+                    </li>
+                  )
+                })
+              )}
+            </ul>
+          </div>
         </section>
 
         <section className="panel">
@@ -224,24 +350,54 @@ export function EnquiriesPage() {
                 </select>
               </label>
 
-              <label className={`chip-toggle ${autoSync ? 'on' : ''}`}>
-                <input type="checkbox" checked={autoSync} onChange={(e) => setAutoSync(e.target.checked)} />
-                <span className="status-dot" />
-                Auto-sync
-              </label>
+              <div className="status-seg" role="tablist" aria-label="Enquiry status">
+                {STATUS_FILTERS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={statusFilter === item.id}
+                    className={`status-seg-btn ${item.id} ${statusFilter === item.id ? 'on' : ''}`}
+                    onClick={() => setStatusFilter(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
 
-              <button type="button" className="btn btn-ghost" onClick={() => void load()} disabled={loading}>
-                <IconRefresh /> Refresh
+              <button
+                type="button"
+                className={`chip-toggle ${alertsOn ? 'on' : ''}`}
+                onClick={() => void toggleAlerts()}
+              >
+                <IconBell />
+                {alertsOn ? 'Alerts on' : 'Alerts off'}
               </button>
-              <button type="button" className="btn btn-ghost" onClick={exportCsv} disabled={filtered.length === 0}>
-                <IconCsv /> CSV
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-round"
+                onClick={() => void load()}
+                disabled={loading}
+                aria-label="Refresh"
+              >
+                <IconRefresh />
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-round"
+                onClick={exportCsv}
+                disabled={filtered.length === 0}
+                aria-label="Download CSV"
+              >
+                <IconCsv />
               </button>
             </div>
           </div>
 
           <div className="table-meta">
             <p>
-              Showing {total === 0 ? 0 : rangeStart}–{rangeEnd} of {total} inquiries
+              Showing <strong>{total}</strong> of <strong>{rows.length}</strong> inquiries
             </p>
             <p className="muted">
               {loading ? 'Syncing…' : syncedAt ? `Synced ${syncedAt.toLocaleTimeString()}` : 'Not synced yet'}
@@ -250,36 +406,7 @@ export function EnquiriesPage() {
 
           {error && <p className="banner-error">{error}</p>}
 
-          <div className="table-wrap desktop-table">
-            <table className="data-table feed-table">
-              <tbody>
-                {!loading && pageRows.length === 0 && (
-                  <tr>
-                    <td colSpan={5}>
-                      <div className="empty">No enquiries match this view.</div>
-                    </td>
-                  </tr>
-                )}
-                {loading && enquiries.length === 0 && (
-                  <tr>
-                    <td colSpan={5}>
-                      <div className="empty">Loading latest enquiries…</div>
-                    </td>
-                  </tr>
-                )}
-                {pageRows.map((row) => (
-                  <EnquiryRow
-                    key={row.id}
-                    row={row}
-                    onOpenConversation={setConversationId}
-                    onDecide={decide}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="card-list">
+          <div className="ticket-list">
             {loading && enquiries.length === 0 && <div className="empty">Loading latest enquiries…</div>}
             {!loading && pageRows.length === 0 && <div className="empty">No enquiries match this view.</div>}
             {pageRows.map((row) => (
@@ -323,64 +450,11 @@ export function EnquiriesPage() {
   )
 }
 
-function EnquiryRow({
-  row,
-  onOpenConversation,
-  onDecide,
-}: {
-  row: SalesEnquiry
-  onOpenConversation: (id: string) => void
-  onDecide: (enquiry: SalesEnquiry, decision: EnquiryDecision) => void
-}) {
-  const received = formatReceived(row.createdAt)
-  const live = isSalesBooking(row)
-  const contact = [row.guestPhone, row.guestEmail].filter(Boolean).join(' - ')
-
-  return (
-    <tr>
-      <td>
-        <div className="type-cell">
-          <span className="row-pin" aria-hidden="true">
-            <IconPin />
-          </span>
-          <span className={`status-dot ${live ? 'dot-live' : ''}`} />
-          <div className="type-copy">
-            <p className="cell-title">{displayEnquiryType(row)}</p>
-            {row.conversationId ? (
-              <button
-                type="button"
-                className="conv-link"
-                onClick={() => onOpenConversation(row.conversationId)}
-              >
-                {row.conversationId}
-              </button>
-            ) : (
-              <p className="cell-sub">#{row.id}</p>
-            )}
-          </div>
-        </div>
-      </td>
-      <td>
-        <div className="guest-cell">
-          <span className="guest-avatar">{guestInitial(displayGuestName(row))}</span>
-          <div>
-            <p className="cell-title">{displayGuestName(row)}</p>
-            <p className="cell-sub">{contact || 'No contact details'}</p>
-          </div>
-        </div>
-      </td>
-      <td>
-        <p className="preview-line">{displayEnquiryText(row)}</p>
-      </td>
-      <td className="time-cell">
-        <p className="cell-title">{received.absolute}</p>
-        {received.relative ? <p className="cell-sub">{received.relative}</p> : null}
-      </td>
-      <td>
-        <DecisionButtons enquiry={row} onDecide={onDecide} />
-      </td>
-    </tr>
-  )
+function typeTone(type: string): string {
+  const tones = ['tone-teal', 'tone-blue', 'tone-green', 'tone-indigo']
+  let hash = 0
+  for (const ch of type) hash += ch.charCodeAt(0)
+  return tones[hash % tones.length] ?? 'tone-teal'
 }
 
 function EnquiryCard({
@@ -393,37 +467,79 @@ function EnquiryCard({
   onDecide: (enquiry: SalesEnquiry, decision: EnquiryDecision) => void
 }) {
   const received = formatReceived(row.createdAt)
-  const live = isSalesBooking(row)
+  const name = displayGuestName(row)
+  const phone = row.guestPhone.trim()
+  const email = row.guestEmail.trim()
 
   return (
-    <article className="enquiry-card">
-      <div className="enquiry-card-top">
-        <div className="type-cell">
-          <span className={`status-dot ${live ? 'dot-live' : ''}`} />
-          <span className="type-pill">{displayEnquiryType(row)}</span>
+    <article className={`ticket ${typeTone(displayEnquiryType(row))}`}>
+      <div className="ticket-head">
+        <div className="ticket-title-block">
+          <div className="ticket-title-row">
+            <span className="ticket-dot" aria-hidden="true" />
+            <h2>{displayEnquiryType(row)}</h2>
+            {row.decision === 'accepted' ? <span className="status-pill accepted">Accepted</span> : null}
+            {row.decision === 'rejected' ? <span className="status-pill rejected">Rejected</span> : null}
+          </div>
+          {row.conversationId ? (
+            <button
+              type="button"
+              className="conv-link"
+              onClick={() => onOpenConversation(row.conversationId)}
+            >
+              {row.conversationId}
+            </button>
+          ) : (
+            <p className="conv-link static">#{row.id}</p>
+          )}
+        </div>
+
+        <div className="ticket-aside">
+          <div className="ticket-time">
+            <p>{received.absolute}</p>
+            {received.relative ? (
+              <p className="ticket-relative">
+                <IconClock /> {received.relative}
+              </p>
+            ) : null}
+          </div>
+          <DecisionButtons enquiry={row} onDecide={onDecide} />
+          {row.conversationId ? (
+            <button
+              type="button"
+              className="ticket-chevron"
+              aria-label="Open conversation"
+              onClick={() => onOpenConversation(row.conversationId)}
+            >
+              <IconChevron />
+            </button>
+          ) : null}
         </div>
       </div>
-      <div className="guest-cell">
-        <span className="guest-avatar">{guestInitial(displayGuestName(row))}</span>
-        <div>
-          <h2>{displayGuestName(row)}</h2>
-          <p className="cell-sub">
-            {[row.guestPhone, row.guestEmail].filter(Boolean).join(' · ') || 'No contact details'}
-          </p>
+
+      <div className="ticket-body">
+        <div className="ticket-guest">
+          <span className="guest-avatar">{guestInitial(name)}</span>
+          <div>
+            <p className="guest-name">{name}</p>
+            {phone ? (
+              <p className="contact-line">
+                <IconPhone /> {phone}
+              </p>
+            ) : null}
+            {email ? (
+              <p className="contact-line">
+                <IconMail /> {email}
+              </p>
+            ) : null}
+            {!phone && !email ? <p className="contact-line">No contact details</p> : null}
+          </div>
         </div>
-      </div>
-      {row.conversationId ? (
-        <button type="button" className="conv-link" onClick={() => onOpenConversation(row.conversationId)}>
-          {row.conversationId}
-        </button>
-      ) : null}
-      <p className="preview-line">{displayEnquiryText(row)}</p>
-      <div className="enquiry-card-foot">
-        <span className="muted">
-          {received.absolute}
-          {received.relative ? ` · ${received.relative}` : ''}
-        </span>
-        <DecisionButtons enquiry={row} onDecide={onDecide} />
+
+        <div className="ticket-request">
+          <p className="request-kicker">Request details</p>
+          <p className="request-text">{displayRequestBody(row)}</p>
+        </div>
       </div>
     </article>
   )

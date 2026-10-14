@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
 import { defineConfig, loadEnv, type Connect, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { addPushSubscription, dispatchNewEnquiryPushes, getVapidPublicKey } from './lib/push.js'
 import { fetchWithRetry, formatUpstreamError } from './lib/upstream.js'
 
 const DEFAULT_WEBHOOK = 'https://engine.auriforce.com/webhook/fetch-sales-enquiry'
@@ -129,6 +130,36 @@ function salesApiPlugin(env: Record<string, string>): Plugin {
           return
         }
 
+        if (req.method === 'GET' && url === '/api/push/vapid') {
+          json(res, 200, { publicKey: getVapidPublicKey() })
+          return
+        }
+
+        if (req.method === 'POST' && url === '/api/push/subscribe') {
+          try {
+            const body = await readJsonBody(req)
+            const count = await addPushSubscription(body.subscription ?? body)
+            json(res, 200, { ok: true, count })
+          } catch (error) {
+            json(res, 400, {
+              error: error instanceof Error ? error.message : 'Could not save subscription',
+            })
+          }
+          return
+        }
+
+        if ((req.method === 'GET' || req.method === 'POST') && url === '/api/push/dispatch') {
+          try {
+            const result = await dispatchNewEnquiryPushes()
+            json(res, 200, { ok: true, ...result })
+          } catch (error) {
+            json(res, 502, {
+              error: error instanceof Error ? error.message : 'Push dispatch failed',
+            })
+          }
+          return
+        }
+
         if (req.method === 'GET' && url === '/api/enquiries') {
           try {
             const upstream = await fetchWithRetry(webhookUrl, { method: 'GET' })
@@ -177,8 +208,14 @@ export default defineConfig(({ mode }) => {
     ...loadEnv(mode, path.resolve(process.cwd(), '..', 'outbound-ai-manager'), ''),
     ...loadEnv(mode, process.cwd(), ''),
   }
+  for (const [key, value] of Object.entries(env)) {
+    if (process.env[key] === undefined) process.env[key] = value
+  }
   return {
     plugins: [react(), salesApiPlugin(env)],
+    resolve: {
+      dedupe: ['react', 'react-dom'],
+    },
     server: {
       host: '127.0.0.1',
       port: 5174,
